@@ -1,0 +1,102 @@
+name: mattermost
+base: core18 
+version: '0.1' 
+summary: Open source Slack-alternative in Golang and React - Mattermost
+description: |
+  Mattermost is an open source, private cloud, Slack-alternative from https://mattermost.com
+
+grade: devel 
+confinement: devmode 
+
+parts:
+  mattermost:
+    source: ./mattermost
+    plugin: go
+    go-importpath: github.com/mattermost/mattermost-server
+    build-packages:
+      - gcc
+
+  boost:
+    plugin: dump
+    source: ./boost_1_69_0.tar.gz
+    stage:
+      - boost/
+    prime:
+      - -*
+
+  mysql:
+    plugin: cmake
+    source: ./mysql-server/
+    source-type: local
+    source-depth: 1
+    after: [boost]
+    configflags:
+      - -DWITH_BOOST=$SNAPCRAFT_STAGE
+      - -DWITH_INNODB_PAGE_CLEANER_PRIORITY=OFF
+      - -DCMAKE_INSTALL_PREFIX=/
+      - -DBUILD_CONFIG=mysql_release
+      - -DWITH_UNIT_TESTS=OFF
+      - -DWITH_EMBEDDED_SERVER=OFF
+      - -DWITH_ARCHIVE_STORAGE_ENGINE=OFF
+      - -DWITH_BLACKHOLE_STORAGE_ENGINE=OFF
+      - -DWITH_FEDERATED_STORAGE_ENGINE=OFF
+      - -DWITH_PARTITION_STORAGE_ENGINE=OFF
+      - -DINSTALL_MYSQLTESTDIR=
+    build-packages:
+      - wget
+      - g++
+      - cmake
+      - bison
+      - libncurses5-dev
+      - libaio-dev
+      - libssl-dev
+      - pkg-config
+    prime:
+      - -bin/innochecksum
+      - -bin/lz4_decompress
+      - -bin/myisam*
+      - -bin/mysqladmin
+      - -bin/mysqlbinlog
+      - -bin/mysql_client_test
+      - -bin/mysql_config*
+      - -bin/mysqld_multi
+      - -bin/mysqlimport
+      - -bin/mysql_install_db
+      - -bin/mysql_plugin
+      - -bin/mysqlpump
+      - -bin/mysql_secure_installation
+      - -bin/mysqlshow
+      - -bin/mysqlslap
+      - -bin/mysql_ssl_rsa_setup
+      - -bin/mysqltest
+      - -bin/mysql_tzinfo_to_sql
+      - -bin/perror
+      - -bin/replace
+      - -bin/resolveip
+      - -bin/resolve_stack_dump
+      - -bin/zlib_decompress
+
+apps:
+  mysql:
+    command: bin/mysqld
+    daemon: simple
+    restart-condition: always
+    plugs: [network, network-bind, removable-media]
+
+  mysql-client:
+    command: bin/mysql
+    plugs: [network, network-bind]
+
+  mysqldump:
+    command: bin/mysqldump
+    plugs: [network, network-bind]
+
+  mattermost:
+    command: bin/mattermost
+    daemon: simple
+    restart-condition: always
+    plugs: [network, newtork-bind]
+
+hooks:
+  install:
+    plugs: [network]
